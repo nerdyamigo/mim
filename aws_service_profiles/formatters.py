@@ -76,6 +76,29 @@ class OutputFormatter:
         else:  # text
             self._format_action_details_text(service_name, action_name, resources, condition_keys)
     
+    def format_action_details_enhanced(self, service_name: str, action_name: str, detailed_resources: List[Dict[str, Any]], action_condition_keys: List[str], format_type: str = "table") -> None:
+        """Format and display enhanced details for a specific action including resource ARNs and context keys."""
+        if format_type == "json":
+            data = {
+                "service": service_name,
+                "action": action_name,
+                "action_condition_keys": action_condition_keys,
+                "resources": detailed_resources
+            }
+            self.console.print(json.dumps(data, indent=2))
+        elif format_type == "yaml":
+            data = {
+                "service": service_name,
+                "action": action_name,
+                "action_condition_keys": action_condition_keys,
+                "resources": detailed_resources
+            }
+            self.console.print(yaml.dump(data, default_flow_style=False))
+        elif format_type == "table":
+            self._format_action_details_enhanced_table(service_name, action_name, detailed_resources, action_condition_keys)
+        else:  # text
+            self._format_action_details_enhanced_text(service_name, action_name, detailed_resources, action_condition_keys)
+    
     def format_resource_details(self, service_name: str, resource_name: str, resource_details: Dict[str, Any], format_type: str = "table") -> None:
         """Format and display details for a specific resource."""
         if format_type == "json":
@@ -181,6 +204,51 @@ class OutputFormatter:
         self.console.print(f"[bold]Action details for {service_name}:{action_name}[/bold]")
         self.console.print(f"  [cyan]Resources:[/cyan] {', '.join(resources) if resources else 'None'}")
         self.console.print(f"  [yellow]Action Condition Keys:[/yellow] {', '.join(condition_keys) if condition_keys else 'None'}")
+    
+    def _format_action_details_enhanced_table(self, service_name: str, action_name: str, detailed_resources: List[Dict[str, Any]], action_condition_keys: List[str]) -> None:
+        """Format enhanced action details as a table."""
+        table = Table(title=f"Enhanced Action Details: {service_name}:{action_name}", show_header=True, header_style="bold magenta")
+        table.add_column("Resource", style="cyan", no_wrap=True)
+        table.add_column("ARN Format(s)", style="green")
+        table.add_column("Resource Context Keys", style="yellow")
+        
+        for resource in detailed_resources:
+            arn_formats = "\n".join(resource['arn_formats']) if len(resource['arn_formats']) > 1 else resource['arn_formats'][0] if resource['arn_formats'] else 'N/A'
+            context_keys = "\n".join(resource['context_keys']) if resource['context_keys'] else "None"
+            table.add_row(resource['name'], arn_formats, context_keys)
+        
+        self.console.print(table)
+        
+        # Show action-level condition keys separately if they exist
+        if action_condition_keys:
+            action_table = Table(title=f"Action-Level Condition Keys", show_header=True, header_style="bold magenta")
+            action_table.add_column("Action Condition Keys", style="yellow")
+            for key in action_condition_keys:
+                action_table.add_row(key)
+            self.console.print(action_table)
+    
+    def _format_action_details_enhanced_text(self, service_name: str, action_name: str, detailed_resources: List[Dict[str, Any]], action_condition_keys: List[str]) -> None:
+        """Format enhanced action details as plain text."""
+        self.console.print(f"[bold]Enhanced Action details for {service_name}:{action_name}[/bold]")
+        
+        self.console.print(f"\n[bold cyan]Resources:[/bold cyan]")
+        for resource in detailed_resources:
+            self.console.print(f"  [cyan]• {resource['name']}[/cyan]")
+            if len(resource['arn_formats']) == 1:
+                self.console.print(f"    [green]ARN Format:[/green] {resource['arn_formats'][0]}")
+            else:
+                self.console.print(f"    [green]ARN Formats:[/green]")
+                for arn_format in resource['arn_formats']:
+                    self.console.print(f"      • {arn_format}")
+            if resource['context_keys']:
+                self.console.print(f"    [yellow]Resource Context Keys:[/yellow] {', '.join(resource['context_keys'])}")
+            else:
+                self.console.print(f"    [yellow]Resource Context Keys:[/yellow] None")
+        
+        if action_condition_keys:
+            self.console.print(f"\n[bold yellow]Action-Level Condition Keys:[/bold yellow] {', '.join(action_condition_keys)}")
+        else:
+            self.console.print(f"\n[bold yellow]Action-Level Condition Keys:[/bold yellow] None")
     
     def _format_resource_details_table(self, service_name: str, resource_name: str, resource_details: Dict[str, Any]) -> None:
         """Format resource details as a table."""

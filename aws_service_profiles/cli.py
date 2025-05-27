@@ -184,13 +184,13 @@ def cli(ctx, service_name, action_name, format, count, no_color, list_services, 
     # If --action flag is used, show details for a specific action
     if action:
         action_condition_keys = client.get_condition_keys_for_action(service_name, action)
-        action_resources = client.get_resources_for_service_action(service_name, action)
+        detailed_resources = client.get_resources_with_details_for_service_action(service_name, action)
         
-        if not action_resources and not action_condition_keys:
+        if not detailed_resources and not action_condition_keys:
             click.echo(f"Action '{action}' not found for service '{service_name}'", err=True)
             return
         
-        formatter.format_action_details(service_name, action, action_resources, action_condition_keys, format)
+        formatter.format_action_details_enhanced(service_name, action, detailed_resources, action_condition_keys, format)
         return
     
     # If --resource flag is used, show details for a specific resource
