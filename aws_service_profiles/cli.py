@@ -8,6 +8,7 @@ from .formatters import OutputFormatter
 from .service_helper import ServiceHelper, validate_service_name
 import json
 import yaml
+import fnmatch
 
 
 class ServiceAwareCommand(click.Command):
@@ -71,23 +72,17 @@ def print_resources_for_service_action(client: AWSClient, service_name: str, act
         click.echo(f"No resources found for action '{action_name}' in service '{service_name}'", err=True)
 
 
-def process_service_action(client: AWSClient, service_name: str, action_name: str) -> Dict[str, Any]:
-    """Process a single service-action pair and return its metadata."""
-    action_metadata = client.get_action_metadata(service_name, action_name)
-    if not action_metadata:
-        return {
-            'service': service_name,
-            'action': action_name,
-            'resources': [],
-            'condition_keys': []
-        }
-    
-    return {
-        'service': service_name,
-        'action': action_name,
-        'resources': action_metadata['resources'],
-        'condition_keys': action_metadata['condition_keys']
-    }
+def expand_wildcard_actions(client: AWSClient, service: str, action_pattern: str) -> List[str]:
+    """Expand a wildcard pattern to a list of matching actions for a service."""
+    try:
+        # Get all actions for the service
+        all_actions = client.get_all_actions_for_service(service)
+        # Filter actions that match the pattern
+        matching_actions = [action for action in all_actions if fnmatch.fnmatch(action, action_pattern)]
+        return matching_actions
+    except Exception as e:
+        click.echo(f"Error expanding wildcard for {service}:{action_pattern}: {str(e)}", err=True)
+        return []
 
 
 def parse_service_action_input(service_actions: List[str]) -> List[Tuple[str, str]]:
@@ -105,9 +100,67 @@ def parse_service_action_input(service_actions: List[str]) -> List[Tuple[str, st
                 raise click.UsageError(
                     f"Invalid format: '{service_action}'. Expected format is 'service:action'.\n"
                     "Example: s3:GetObject or sagemaker:CreateTrainingJob\n"
-                    "Multiple pairs can be comma-separated: s3:GetObject,s3:PutObject,sagemaker:CreateTrainingJob"
+                    "Multiple pairs can be comma-separated: s3:GetObject,s3:PutObject,sagemaker:CreateTrainingJob\n"
+                    "Wildcards are supported: sagemaker:Create*"
                 )
     return pairs
+
+
+def process_service_action(client: AWSClient, service: str, action: str) -> Dict[str, Any]:
+    """Process a single service-action pair and return its metadata."""
+    try:
+        # Check if action contains wildcards
+        if '*' in action or '?' in action:
+            # Expand wildcard pattern
+            matching_actions = expand_wildcard_actions(client, service, action)
+            if not matching_actions:
+                return {
+                    'service': service,
+                    'action': action,
+                    'error': f"No actions found matching pattern '{action}'"
+                }
+            
+            # Process each matching action
+            results = []
+            for matched_action in matching_actions:
+                try:
+                    # Get resources and their details
+                    resources = client.get_resources_with_details_for_service_action(service, matched_action)
+                    # Get condition keys for the action
+                    condition_keys = client.get_condition_keys_for_action(service, matched_action)
+                    results.append({
+                        'service': service,
+                        'action': matched_action,
+                        'resources': resources,
+                        'condition_keys': condition_keys
+                    })
+                except Exception as e:
+                    results.append({
+                        'service': service,
+                        'action': matched_action,
+                        'error': str(e)
+                    })
+            return {
+                'service': service,
+                'pattern': action,
+                'matched_actions': results
+            }
+        else:
+            # Process single action
+            resources = client.get_resources_with_details_for_service_action(service, action)
+            condition_keys = client.get_condition_keys_for_action(service, action)
+            return {
+                'service': service,
+                'action': action,
+                'resources': resources,
+                'condition_keys': condition_keys
+            }
+    except Exception as e:
+        return {
+            'service': service,
+            'action': action,
+            'error': str(e)
+        }
 
 
 @click.command(cls=ServiceAwareCommand)
@@ -127,7 +180,7 @@ def parse_service_action_input(service_actions: List[str]) -> List[Tuple[str, st
 @click.option('--resources', is_flag=True, help='Show all unique resources for the service')
 @click.option('--action', help='Get details for a specific action')
 @click.option('--resource', help='Get details for a specific resource')
-@click.option('--service-actions', '-sa', help='Specify comma-separated service:action pairs (e.g., s3:GetObject,s3:PutObject,sagemaker:CreateTrainingJob)')
+@click.option('--service-actions', '-sa', help='Specify comma-separated service:action pairs (e.g., s3:GetObject,s3:PutObject,sagemaker:Create*)')
 @click.pass_context
 def cli(ctx, service_name, action_name, format, count, no_color, list_services, list_all_context_keys, list_global_context_keys, list_service_context_keys, context_keys, global_context_keys, service_context_keys, resources, action, resource, service_actions):
     """
@@ -146,7 +199,7 @@ def cli(ctx, service_name, action_name, format, count, no_color, list_services, 
     - python main.py --list-all-context-keys          → List all unique context keys across AWS
     - python main.py --list-global-context-keys       → List all AWS global context keys
     - python main.py --list-service-context-keys      → List all service-specific context keys
-    - python main.py -sa s3:GetObject,s3:PutObject,sagemaker:CreateTrainingJob  → Get metadata for specific service/action pairs
+    - python main.py -sa s3:GetObject,s3:PutObject,sagemaker:Create*  → Get metadata for specific service/action pairs (wildcards supported)
     """
     
     client = AWSClient()
@@ -187,27 +240,63 @@ def cli(ctx, service_name, action_name, format, count, no_color, list_services, 
             
             # Format results
             if format == "json":
-                formatter.console.print(json.dumps(all_results, indent=2))
+                print(json.dumps(all_results, indent=2))
             elif format == "yaml":
                 formatter.console.print(yaml.dump(all_results, default_flow_style=False))
             elif format == "table":
                 for result in all_results:
-                    formatter.format_action_details_enhanced(
-                        result['service'],
-                        result['action'],
-                        result['resources'],
-                        result['condition_keys'],
-                        format
-                    )
+                    if 'error' in result:
+                        click.echo(f"Error for {result['service']}:{result['action']}: {result['error']}", err=True)
+                        continue
+                    
+                    if 'matched_actions' in result:
+                        # Handle wildcard expansion results
+                        for matched_result in result['matched_actions']:
+                            if 'error' in matched_result:
+                                click.echo(f"Error for {matched_result['service']}:{matched_result['action']}: {matched_result['error']}", err=True)
+                                continue
+                            formatter.format_action_details_enhanced(
+                                matched_result['service'],
+                                matched_result['action'],
+                                matched_result['resources'],
+                                matched_result['condition_keys'],
+                                format
+                            )
+                    else:
+                        formatter.format_action_details_enhanced(
+                            result['service'],
+                            result['action'],
+                            result['resources'],
+                            result['condition_keys'],
+                            format
+                        )
             else:  # text
                 for result in all_results:
-                    formatter.format_action_details_enhanced(
-                        result['service'],
-                        result['action'],
-                        result['resources'],
-                        result['condition_keys'],
-                        format
-                    )
+                    if 'error' in result:
+                        click.echo(f"Error for {result['service']}:{result['action']}: {result['error']}", err=True)
+                        continue
+                    
+                    if 'matched_actions' in result:
+                        # Handle wildcard expansion results
+                        for matched_result in result['matched_actions']:
+                            if 'error' in matched_result:
+                                click.echo(f"Error for {matched_result['service']}:{matched_result['action']}: {matched_result['error']}", err=True)
+                                continue
+                            formatter.format_action_details_enhanced(
+                                matched_result['service'],
+                                matched_result['action'],
+                                matched_result['resources'],
+                                matched_result['condition_keys'],
+                                format
+                            )
+                    else:
+                        formatter.format_action_details_enhanced(
+                            result['service'],
+                            result['action'],
+                            result['resources'],
+                            result['condition_keys'],
+                            format
+                        )
             return
             
         except click.UsageError as e:

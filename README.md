@@ -229,7 +229,14 @@ mim -sa sagemaker:CreateTrainingJob,ec2:DescribeInstances --format text
 
 # Get metadata for specific actions across different services
 mim -sa s3:GetObject,s3:PutObject,ec2:RunInstances,sagemaker:CreateTrainingJob --format json
+
+# Using wildcards (note: always quote the argument to prevent shell expansion)
+mim -sa "s3:Get*" --format json
+mim -sa "sagemaker:Create*" --format text
+mim -sa "s3:Get*,s3:Put*,sagemaker:Create*" --format yaml
 ```
+
+> **Note**: When using wildcards (`*` or `?`), always quote the `-sa` argument to prevent the shell from expanding the wildcards. For example, use `mim -sa "s3:Get*"` instead of `mim -sa s3:Get*`.
 
 The tool will process all specified service:action pairs and return the combined results in your chosen format.
 
