@@ -40,6 +40,50 @@ class AWSClient:
         metadata = response.json()
         return metadata
     
+    def get_action_metadata(self, service_name: str, action_name: str) -> Optional[Dict[str, Any]]:
+        """Get metadata for a specific action without fetching the entire service metadata."""
+        metadata = self.find_all_service_metadata(service_name)
+        if not metadata:
+            return None
+        
+        service_metadata_actions = metadata.get("Actions", [])
+        
+        for action in service_metadata_actions:
+            if action['Name'] == action_name:
+                # Get condition keys specific to this action
+                action_condition_keys = action.get('ActionConditionKeys', [])
+                
+                # Get resources for this action
+                resources = []
+                if "Resources" in action:
+                    for resource in action['Resources']:
+                        resource_name = resource['Name']
+                        # Get resource details including its condition keys
+                        resource_details = self.get_resource_details(service_name, resource_name)
+                        if resource_details:
+                            resources.append({
+                                'name': resource_name,
+                                'arn_formats': resource_details['arn_formats'],
+                                'condition_keys': resource_details['context_keys']
+                            })
+                        else:
+                            # Fallback if resource details not found
+                            resources.append({
+                                'name': resource_name,
+                                'arn_formats': ['N/A'],
+                                'condition_keys': []
+                            })
+                else:
+                    resources = [{'name': '*', 'arn_formats': ['*'], 'condition_keys': []}]
+                
+                return {
+                    'name': action_name,
+                    'resources': resources,
+                    'condition_keys': action_condition_keys
+                }
+        
+        return None
+    
     def get_all_actions_for_service(self, service_name: str) -> List[str]:
         """Pass a service and get all the actions that service supports."""
         metadata = self.find_all_service_metadata(service_name)
@@ -146,39 +190,9 @@ class AWSClient:
     
     def get_resources_with_details_for_service_action(self, service_name: str, action_name: str) -> List[Dict[str, Any]]:
         """Get resources with ARN and combined action+resource condition keys for a specific service action."""
-        metadata = self.find_all_service_metadata(service_name)
-        if not metadata:
-            return []
-        
-        service_metadata_actions = metadata.get("Actions", [])
-        
-        for action in service_metadata_actions:
-            if action['Name'] == action_name:
-                # Get condition keys specific to this action
-                action_condition_keys = self.get_condition_keys_for_action(service_name, action_name)
-                
-                if "Resources" in action:
-                    detailed_resources = []
-                    for resource in action['Resources']:
-                        resource_name = resource['Name']
-                        # Get resource details with resource-specific condition keys
-                        resource_details = self.get_resource_details(service_name, resource_name)
-                        if resource_details:
-                            # Combine action-specific and resource-specific condition keys
-                            combined_keys = list(set(action_condition_keys + resource_details['context_keys']))
-                            resource_details['context_keys'] = combined_keys
-                            detailed_resources.append(resource_details)
-                        else:
-                            # Fallback if resource details not found
-                            detailed_resources.append({
-                                'name': resource_name,
-                                'arn_formats': ['N/A'],
-                                'context_keys': action_condition_keys
-                            })
-                    return detailed_resources
-                else:
-                    return [{'name': '*', 'arn_formats': ['*'], 'context_keys': action_condition_keys}]  # Action supports all resources
-        
+        action_metadata = self.get_action_metadata(service_name, action_name)
+        if action_metadata:
+            return action_metadata['resources']
         return []
     
     def get_unique_resources_count_for_service(self, service_name: str) -> int:

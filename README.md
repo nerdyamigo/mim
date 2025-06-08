@@ -214,6 +214,25 @@ mim s3 --resource bucket
 mim ec2 --resource instance
 ```
 
+### 5. Querying Multiple Service:Action Pairs
+
+You can query multiple service:action pairs in a single command using comma-separated values:
+
+```bash
+# Query multiple service:action pairs
+mim -sa s3:GetObject,s3:PutBucketPolicy,sagemaker:CreateTrainingJob
+
+# With different output formats
+mim -sa s3:GetObject,s3:PutObject --format json
+mim -sa ec2:RunInstances,s3:CreateBucket --format yaml
+mim -sa sagemaker:CreateTrainingJob,ec2:DescribeInstances --format text
+
+# Get metadata for specific actions across different services
+mim -sa s3:GetObject,s3:PutObject,ec2:RunInstances,sagemaker:CreateTrainingJob --format json
+```
+
+The tool will process all specified service:action pairs and return the combined results in your chosen format.
+
 ## 🔧 Advanced Usage
 
 ### Service Validation and Suggestions

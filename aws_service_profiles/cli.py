@@ -1,9 +1,13 @@
 """CLI interface for AWS Service Profiles."""
 
 import click
+from typing import List, Dict, Any, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from .aws_client import AWSClient
 from .formatters import OutputFormatter
 from .service_helper import ServiceHelper, validate_service_name
+import json
+import yaml
 
 
 class ServiceAwareCommand(click.Command):
@@ -67,6 +71,45 @@ def print_resources_for_service_action(client: AWSClient, service_name: str, act
         click.echo(f"No resources found for action '{action_name}' in service '{service_name}'", err=True)
 
 
+def process_service_action(client: AWSClient, service_name: str, action_name: str) -> Dict[str, Any]:
+    """Process a single service-action pair and return its metadata."""
+    action_metadata = client.get_action_metadata(service_name, action_name)
+    if not action_metadata:
+        return {
+            'service': service_name,
+            'action': action_name,
+            'resources': [],
+            'condition_keys': []
+        }
+    
+    return {
+        'service': service_name,
+        'action': action_name,
+        'resources': action_metadata['resources'],
+        'condition_keys': action_metadata['condition_keys']
+    }
+
+
+def parse_service_action_input(service_actions: List[str]) -> List[Tuple[str, str]]:
+    """Parse service:action format input into service-action pairs."""
+    pairs = []
+    for input_str in service_actions:
+        # Split by comma and strip whitespace
+        service_action_list = [sa.strip() for sa in input_str.split(',')]
+        
+        for service_action in service_action_list:
+            try:
+                service, action = service_action.split(':', 1)
+                pairs.append((service.strip(), action.strip()))
+            except ValueError:
+                raise click.UsageError(
+                    f"Invalid format: '{service_action}'. Expected format is 'service:action'.\n"
+                    "Example: s3:GetObject or sagemaker:CreateTrainingJob\n"
+                    "Multiple pairs can be comma-separated: s3:GetObject,s3:PutObject,sagemaker:CreateTrainingJob"
+                )
+    return pairs
+
+
 @click.command(cls=ServiceAwareCommand)
 @click.argument('service_name', required=False)
 @click.argument('action_name', required=False)
@@ -84,8 +127,9 @@ def print_resources_for_service_action(client: AWSClient, service_name: str, act
 @click.option('--resources', is_flag=True, help='Show all unique resources for the service')
 @click.option('--action', help='Get details for a specific action')
 @click.option('--resource', help='Get details for a specific resource')
+@click.option('--service-actions', '-sa', help='Specify comma-separated service:action pairs (e.g., s3:GetObject,s3:PutObject,sagemaker:CreateTrainingJob)')
 @click.pass_context
-def cli(ctx, service_name, action_name, format, count, no_color, list_services, list_all_context_keys, list_global_context_keys, list_service_context_keys, context_keys, global_context_keys, service_context_keys, resources, action, resource):
+def cli(ctx, service_name, action_name, format, count, no_color, list_services, list_all_context_keys, list_global_context_keys, list_service_context_keys, context_keys, global_context_keys, service_context_keys, resources, action, resource, service_actions):
     """
     AWS Service Profiles CLI - Get AWS service actions and resources
     
@@ -102,10 +146,73 @@ def cli(ctx, service_name, action_name, format, count, no_color, list_services, 
     - python main.py --list-all-context-keys          → List all unique context keys across AWS
     - python main.py --list-global-context-keys       → List all AWS global context keys
     - python main.py --list-service-context-keys      → List all service-specific context keys
+    - python main.py -sa s3:GetObject,s3:PutObject,sagemaker:CreateTrainingJob  → Get metadata for specific service/action pairs
     """
     
     client = AWSClient()
     formatter = OutputFormatter(use_color=not no_color)
+    
+    # Handle service-action pairs
+    if service_actions:
+        try:
+            # Parse service-action pairs
+            service_action_pairs = parse_service_action_input([service_actions])
+            
+            # Validate all services
+            helper = ServiceHelper(client)
+            invalid_services = [service for service, _ in service_action_pairs if not helper.is_valid_service(service)]
+            if invalid_services:
+                for service in invalid_services:
+                    suggestions = helper.get_similar_services(service)
+                    click.echo(f"Error: Invalid service name '{service}'", err=True)
+                    if suggestions:
+                        click.echo("\nDid you mean one of these?", err=True)
+                        for suggestion in suggestions:
+                            click.echo(f"  • {suggestion}", err=True)
+                return
+            
+            # Process service-action pairs
+            all_results = []
+            with ThreadPoolExecutor() as executor:
+                futures = []
+                for service, action in service_action_pairs:
+                    futures.append(executor.submit(process_service_action, client, service, action))
+                
+                for future in as_completed(futures):
+                    try:
+                        result = future.result()
+                        all_results.append(result)
+                    except Exception as e:
+                        click.echo(f"Error processing service/action: {str(e)}", err=True)
+            
+            # Format results
+            if format == "json":
+                formatter.console.print(json.dumps(all_results, indent=2))
+            elif format == "yaml":
+                formatter.console.print(yaml.dump(all_results, default_flow_style=False))
+            elif format == "table":
+                for result in all_results:
+                    formatter.format_action_details_enhanced(
+                        result['service'],
+                        result['action'],
+                        result['resources'],
+                        result['condition_keys'],
+                        format
+                    )
+            else:  # text
+                for result in all_results:
+                    formatter.format_action_details_enhanced(
+                        result['service'],
+                        result['action'],
+                        result['resources'],
+                        result['condition_keys'],
+                        format
+                    )
+            return
+            
+        except click.UsageError as e:
+            click.echo(str(e), err=True)
+            return
     
     if list_services:
         all_services = client.get_aws_services_urls()

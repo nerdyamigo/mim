@@ -205,27 +205,28 @@ class OutputFormatter:
         self.console.print(f"  [cyan]Resources:[/cyan] {', '.join(resources) if resources else 'None'}")
         self.console.print(f"  [yellow]Action Condition Keys:[/yellow] {', '.join(condition_keys) if condition_keys else 'None'}")
     
-    def _format_action_details_enhanced_table(self, service_name: str, action_name: str, detailed_resources: List[Dict[str, Any]], action_condition_keys: List[str]) -> None:
-        """Format enhanced action details as a table."""
-        table = Table(title=f"Enhanced Action Details: {service_name}:{action_name}", show_header=True, header_style="bold magenta")
+    def _format_action_details_enhanced_table(self, service_name: str, action_name: str, resources: List[Dict[str, Any]], condition_keys: List[str]) -> None:
+        """Format action details in an enhanced table format."""
+        table = Table(title=f"{service_name}:{action_name}", show_header=True, header_style="bold magenta")
         table.add_column("Resource", style="cyan", no_wrap=True)
-        table.add_column("ARN Format(s)", style="green")
-        table.add_column("Resource Context Keys", style="yellow")
+        table.add_column("ARN Format", style="green")
+        table.add_column("Resource Condition Keys", style="yellow")
         
-        for resource in detailed_resources:
-            arn_formats = "\n".join(resource['arn_formats']) if len(resource['arn_formats']) > 1 else resource['arn_formats'][0] if resource['arn_formats'] else 'N/A'
-            context_keys = "\n".join(resource['context_keys']) if resource['context_keys'] else "None"
-            table.add_row(resource['name'], arn_formats, context_keys)
+        for resource in resources:
+            arn_formats = "\n".join(resource['arn_formats']) if resource['arn_formats'] else "N/A"
+            resource_condition_keys = "\n".join(resource['condition_keys']) if resource['condition_keys'] else "None"
+            table.add_row(resource['name'], arn_formats, resource_condition_keys)
         
         self.console.print(table)
         
-        # Show action-level condition keys separately if they exist
-        if action_condition_keys:
-            action_table = Table(title=f"Action-Level Condition Keys", show_header=True, header_style="bold magenta")
-            action_table.add_column("Action Condition Keys", style="yellow")
-            for key in action_condition_keys:
-                action_table.add_row(key)
-            self.console.print(action_table)
+        # Add action condition keys in a separate panel
+        if condition_keys:
+            panel = Panel(
+                Text("\n".join(condition_keys), style="yellow"),
+                title="[bold]Action Condition Keys[/bold]",
+                title_align="left"
+            )
+            self.console.print(panel)
     
     def _format_action_details_enhanced_text(self, service_name: str, action_name: str, detailed_resources: List[Dict[str, Any]], action_condition_keys: List[str]) -> None:
         """Format enhanced action details as plain text."""
