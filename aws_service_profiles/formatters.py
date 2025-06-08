@@ -241,15 +241,14 @@ class OutputFormatter:
                 self.console.print(f"    [green]ARN Formats:[/green]")
                 for arn_format in resource['arn_formats']:
                     self.console.print(f"      • {arn_format}")
-            if resource['context_keys']:
+            # Check if context_keys exists in the resource dictionary
+            if 'context_keys' in resource and resource['context_keys']:
                 self.console.print(f"    [yellow]Resource Context Keys:[/yellow] {', '.join(resource['context_keys'])}")
             else:
                 self.console.print(f"    [yellow]Resource Context Keys:[/yellow] None")
         
         if action_condition_keys:
             self.console.print(f"\n[bold yellow]Action-Level Condition Keys:[/bold yellow] {', '.join(action_condition_keys)}")
-        else:
-            self.console.print(f"\n[bold yellow]Action-Level Condition Keys:[/bold yellow] None")
     
     def _format_resource_details_table(self, service_name: str, resource_name: str, resource_details: Dict[str, Any]) -> None:
         """Format resource details as a table."""
