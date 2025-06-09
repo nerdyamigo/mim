@@ -249,6 +249,8 @@ class OutputFormatter:
         
         if action_condition_keys:
             self.console.print(f"\n[bold yellow]Action-Level Condition Keys:[/bold yellow] {', '.join(action_condition_keys)}")
+        else:
+            self.console.print(f"\n[bold yellow]Action-Level Condition Keys:[/bold yellow] None")
     
     def _format_resource_details_table(self, service_name: str, resource_name: str, resource_details: Dict[str, Any]) -> None:
         """Format resource details as a table."""
