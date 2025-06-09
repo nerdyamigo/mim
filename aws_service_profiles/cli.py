@@ -107,7 +107,7 @@ def parse_service_action_input(service_actions: List[str]) -> List[Tuple[str, st
 
 
 def process_service_action(client: AWSClient, service: str, action: str) -> Dict[str, Any]:
-    """Process a single service-action pair and return its metadata."""
+    """Process a single service-action pair and return the results."""
     try:
         # Check if action contains wildcards
         if '*' in action or '?' in action:
@@ -124,15 +124,21 @@ def process_service_action(client: AWSClient, service: str, action: str) -> Dict
             results = []
             for matched_action in matching_actions:
                 try:
-                    # Get resources and their details
-                    resources = client.get_resources_with_details_for_service_action(service, matched_action)
-                    # Get condition keys for the action
-                    condition_keys = client.get_condition_keys_for_action(service, matched_action)
+                    # Get action metadata
+                    action_metadata = client.get_action_metadata(service, matched_action)
+                    if not action_metadata:
+                        results.append({
+                            'service': service,
+                            'action': matched_action,
+                            'error': f"Action '{matched_action}' not found for service '{service}'"
+                        })
+                        continue
+                    
                     results.append({
                         'service': service,
                         'action': matched_action,
-                        'resources': resources,
-                        'condition_keys': condition_keys
+                        'resources': action_metadata['resources'],
+                        'condition_keys': action_metadata['condition_keys']
                     })
                 except Exception as e:
                     results.append({
@@ -140,6 +146,7 @@ def process_service_action(client: AWSClient, service: str, action: str) -> Dict
                         'action': matched_action,
                         'error': str(e)
                     })
+            
             return {
                 'service': service,
                 'pattern': action,
@@ -147,13 +154,19 @@ def process_service_action(client: AWSClient, service: str, action: str) -> Dict
             }
         else:
             # Process single action
-            resources = client.get_resources_with_details_for_service_action(service, action)
-            condition_keys = client.get_condition_keys_for_action(service, action)
+            action_metadata = client.get_action_metadata(service, action)
+            if not action_metadata:
+                return {
+                    'service': service,
+                    'action': action,
+                    'error': f"Action '{action}' not found for service '{service}'"
+                }
+            
             return {
                 'service': service,
                 'action': action,
-                'resources': resources,
-                'condition_keys': condition_keys
+                'resources': action_metadata['resources'],
+                'condition_keys': action_metadata['condition_keys']
             }
     except Exception as e:
         return {
