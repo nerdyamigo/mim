@@ -124,8 +124,8 @@ def process_service_action(client: AWSClient, service: str, action: str) -> Dict
             results = []
             for matched_action in matching_actions:
                 try:
-                    # Get action metadata
-                    action_metadata = client.get_action_metadata(service, matched_action)
+                    # Get action metadata with enhanced condition keys
+                    action_metadata = client.get_action_metadata_with_full_condition_keys(service, matched_action)
                     if not action_metadata:
                         results.append({
                             'service': service,
@@ -153,8 +153,8 @@ def process_service_action(client: AWSClient, service: str, action: str) -> Dict
                 'matched_actions': results
             }
         else:
-            # Process single action
-            action_metadata = client.get_action_metadata(service, action)
+            # Process single action with enhanced condition keys
+            action_metadata = client.get_action_metadata_with_full_condition_keys(service, action)
             if not action_metadata:
                 return {
                     'service': service,
@@ -392,19 +392,20 @@ def cli(ctx, service_name, action_name, format, count, no_color, list_services, 
     
     # If --action flag is used, show details for a specific action
     if action:
-        action_condition_keys = client.get_condition_keys_for_action(service_name, action)
-        detailed_resources = client.get_resources_with_details_for_service_action(service_name, action)
+        # Get enhanced action metadata with full condition key details
+        action_metadata = client.get_action_metadata_with_full_condition_keys(service_name, action)
         
-        if not detailed_resources and not action_condition_keys:
+        if not action_metadata:
             click.echo(f"Action '{action}' not found for service '{service_name}'", err=True)
             return
         
-        formatter.format_action_details_enhanced(service_name, action, detailed_resources, action_condition_keys, format)
+        formatter.format_action_details_enhanced(service_name, action, action_metadata['resources'], action_metadata['condition_keys'], format)
         return
     
     # If --resource flag is used, show details for a specific resource
     if resource:
-        resource_details = client.get_resource_details(service_name, resource)
+        # Get enhanced resource details with full condition key metadata
+        resource_details = client.get_resource_details_with_full_condition_keys(service_name, resource)
         
         if not resource_details:
             click.echo(f"Resource '{resource}' not found for service '{service_name}'", err=True)
@@ -415,6 +416,17 @@ def cli(ctx, service_name, action_name, format, count, no_color, list_services, 
     
     # If --context-keys flag is used, show all unique context keys for the service
     if context_keys:
+        # Get enhanced context keys with metadata when possible
+        if format == 'json' or format == 'yaml':
+            service_context_keys_with_metadata = client.get_condition_keys_with_metadata_for_service(service_name)
+            if service_context_keys_with_metadata:
+                if count:
+                    formatter.format_count(f"Total unique context keys for {service_name}", len(service_context_keys_with_metadata))
+                else:
+                    formatter.format_context_keys_with_metadata(service_name, service_context_keys_with_metadata, format)
+                return
+        
+        # Fallback to string list for table/text formats
         service_context_keys = client.get_all_unique_context_keys_for_service(service_name)
         
         if not service_context_keys:
@@ -482,15 +494,28 @@ def cli(ctx, service_name, action_name, format, count, no_color, list_services, 
         else:
             formatter.format_actions_list(service_name, actions_list, format)
     
-    # If both service and action are provided, return resources with details
+    # If both service and action are provided, return enhanced action metadata
     else:
-        resources_list = client.get_resources_with_details_for_service_action(service_name, action_name)
+        # Get enhanced action metadata with full condition key details
+        action_metadata = client.get_action_metadata_with_full_condition_keys(service_name, action_name)
         
-        if not resources_list:
-            click.echo(f"No resources found for action '{action_name}' in service '{service_name}'", err=True)
+        if not action_metadata:
+            click.echo(f"Action '{action_name}' not found for service '{service_name}'", err=True)
             return
         
         if count:
-            formatter.format_count(f"Total resources for {service_name}:{action_name}", len(resources_list))
+            formatter.format_count(f"Total resources for {service_name}:{action_name}", len(action_metadata['resources']))
         else:
-            formatter.format_resources_list(service_name, action_name, resources_list, format)
+            if format == 'json':
+                # For JSON format, show full action metadata with condition keys
+                data = {
+                    'service': service_name,
+                    'action': action_name,
+                    'resources': action_metadata['resources'],
+                    'condition_keys': action_metadata['condition_keys'],
+                    'count': len(action_metadata['resources'])
+                }
+                print(json.dumps(data, indent=2))
+            else:
+                # For other formats, show resources list
+                formatter.format_resources_list(service_name, action_name, action_metadata['resources'], format)

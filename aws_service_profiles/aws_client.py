@@ -84,6 +84,57 @@ class AWSClient:
         
         return None
     
+    def get_action_metadata_with_full_condition_keys(self, service_name: str, action_name: str) -> Optional[Dict[str, Any]]:
+        """Get metadata for a specific action with full condition key metadata."""
+        metadata = self.find_all_service_metadata(service_name)
+        if not metadata:
+            return None
+        
+        service_metadata_actions = metadata.get("Actions", [])
+        key_lookup = self.get_condition_key_metadata_lookup(service_name)
+        
+        for action in service_metadata_actions:
+            if action['Name'] == action_name:
+                # Get condition keys specific to this action with full metadata
+                action_condition_key_names = action.get('ActionConditionKeys', [])
+                action_condition_keys = []
+                for key_name in action_condition_key_names:
+                    if key_name in key_lookup:
+                        action_condition_keys.append(key_lookup[key_name])
+                    else:
+                        action_condition_keys.append({'Name': key_name, 'Types': ['Unknown']})
+                
+                # Get resources for this action with enhanced condition key metadata
+                resources = []
+                if "Resources" in action:
+                    for resource in action['Resources']:
+                        resource_name = resource['Name']
+                        # Get resource details including its condition keys
+                        resource_details = self.get_resource_details_with_full_condition_keys(service_name, resource_name)
+                        if resource_details:
+                            resources.append({
+                                'name': resource_name,
+                                'arn_formats': resource_details['arn_formats'],
+                                'condition_keys': resource_details['context_keys']
+                            })
+                        else:
+                            # Fallback if resource details not found
+                            resources.append({
+                                'name': resource_name,
+                                'arn_formats': ['N/A'],
+                                'condition_keys': []
+                            })
+                else:
+                    resources = [{'name': '*', 'arn_formats': ['*'], 'condition_keys': []}]
+                
+                return {
+                    'name': action_name,
+                    'resources': resources,
+                    'condition_keys': action_condition_keys
+                }
+        
+        return None
+    
     def get_all_actions_for_service(self, service_name: str) -> List[str]:
         """Pass a service and get all the actions that service supports."""
         metadata = self.find_all_service_metadata(service_name)
@@ -124,6 +175,27 @@ class AWSClient:
         condition_keys = metadata.get("ConditionKeys", [])
         return [key['Name'] for key in condition_keys]
     
+    def get_condition_keys_with_metadata_for_service(self, service_name: str) -> List[Dict[str, Any]]:
+        """Get all condition keys with full metadata for a service."""
+        metadata = self.find_all_service_metadata(service_name)
+        if not metadata:
+            return []
+        
+        condition_keys = metadata.get("ConditionKeys", [])
+        return condition_keys
+    
+    def get_condition_key_metadata_lookup(self, service_name: str) -> Dict[str, Dict[str, Any]]:
+        """Get a lookup dictionary of condition key names to their full metadata."""
+        metadata = self.find_all_service_metadata(service_name)
+        if not metadata:
+            return {}
+        
+        condition_keys = metadata.get("ConditionKeys", [])
+        lookup = {}
+        for key in condition_keys:
+            lookup[key['Name']] = key
+        return lookup
+    
     def get_condition_keys_for_action(self, service_name: str, action_name: str) -> List[str]:
         """Get condition keys that are applicable to a specific action."""
         metadata = self.find_all_service_metadata(service_name)
@@ -140,34 +212,37 @@ class AWSClient:
         
         return []
     
+    def get_condition_keys_with_metadata_for_action(self, service_name: str, action_name: str) -> List[Dict[str, Any]]:
+        """Get condition keys with full metadata for a specific action."""
+        # Get the condition key names for the action
+        action_key_names = self.get_condition_keys_for_action(service_name, action_name)
+        if not action_key_names:
+            return []
+        
+        # Get the full metadata lookup
+        key_lookup = self.get_condition_key_metadata_lookup(service_name)
+        
+        # Return full metadata for the action's condition keys
+        result = []
+        for key_name in action_key_names:
+            if key_name in key_lookup:
+                result.append(key_lookup[key_name])
+            else:
+                # Fallback if key not found in service metadata
+                result.append({'Name': key_name, 'Types': ['Unknown']})
+        
+        return result
+    
     def get_resource_details(self, service_name: str, resource_name: str) -> Optional[Dict[str, Any]]:
         """Get detailed information about a specific resource including ARN and context keys."""
         metadata = self.find_all_service_metadata(service_name)
         if not metadata:
             return None
         
-        service_metadata_resources = metadata.get("Resources", {})
+        service_metadata_resources = metadata.get("Resources", [])
         
-        # Handle both dict and list formats
-        if isinstance(service_metadata_resources, dict):
-            if resource_name in service_metadata_resources:
-                resource_data = service_metadata_resources[resource_name]
-                arn_formats = resource_data.get('ARNFormats', [])
-                # Handle ARNFormats as list or single value
-                if isinstance(arn_formats, list):
-                    arn_display = arn_formats if arn_formats else ['N/A']
-                else:
-                    arn_display = [arn_formats] if arn_formats else ['N/A']
-                
-                # Get condition keys specific to this resource
-                resource_condition_keys = resource_data.get('ConditionKeys', [])
-                
-                return {
-                    'name': resource_name,
-                    'arn_formats': arn_display,
-                    'context_keys': resource_condition_keys
-                }
-        elif isinstance(service_metadata_resources, list):
+        # Handle both dict and list formats - AWS now uses list format primarily
+        if isinstance(service_metadata_resources, list):
             for resource_data in service_metadata_resources:
                 if resource_data.get('Name') == resource_name:
                     arn_formats = resource_data.get('ARNFormats', [])
@@ -185,6 +260,85 @@ class AWSClient:
                         'arn_formats': arn_display,
                         'context_keys': resource_condition_keys
                     }
+        elif isinstance(service_metadata_resources, dict):
+            if resource_name in service_metadata_resources:
+                resource_data = service_metadata_resources[resource_name]
+                arn_formats = resource_data.get('ARNFormats', [])
+                # Handle ARNFormats as list or single value
+                if isinstance(arn_formats, list):
+                    arn_display = arn_formats if arn_formats else ['N/A']
+                else:
+                    arn_display = [arn_formats] if arn_formats else ['N/A']
+                
+                # Get condition keys specific to this resource
+                resource_condition_keys = resource_data.get('ConditionKeys', [])
+                
+                return {
+                    'name': resource_name,
+                    'arn_formats': arn_display,
+                    'context_keys': resource_condition_keys
+                }
+        
+        return None
+    
+    def get_resource_details_with_full_condition_keys(self, service_name: str, resource_name: str) -> Optional[Dict[str, Any]]:
+        """Get detailed information about a specific resource with full condition key metadata."""
+        metadata = self.find_all_service_metadata(service_name)
+        if not metadata:
+            return None
+        
+        service_metadata_resources = metadata.get("Resources", [])
+        key_lookup = self.get_condition_key_metadata_lookup(service_name)
+        
+        # Handle both dict and list formats - AWS now uses list format primarily
+        if isinstance(service_metadata_resources, list):
+            for resource_data in service_metadata_resources:
+                if resource_data.get('Name') == resource_name:
+                    arn_formats = resource_data.get('ARNFormats', [])
+                    # Handle ARNFormats as list or single value
+                    if isinstance(arn_formats, list):
+                        arn_display = arn_formats if arn_formats else ['N/A']
+                    else:
+                        arn_display = [arn_formats] if arn_formats else ['N/A']
+                    
+                    # Get condition keys specific to this resource with full metadata
+                    resource_condition_key_names = resource_data.get('ConditionKeys', [])
+                    resource_condition_keys = []
+                    for key_name in resource_condition_key_names:
+                        if key_name in key_lookup:
+                            resource_condition_keys.append(key_lookup[key_name])
+                        else:
+                            resource_condition_keys.append({'Name': key_name, 'Types': ['Unknown']})
+                    
+                    return {
+                        'name': resource_name,
+                        'arn_formats': arn_display,
+                        'context_keys': resource_condition_keys
+                    }
+        elif isinstance(service_metadata_resources, dict):
+            if resource_name in service_metadata_resources:
+                resource_data = service_metadata_resources[resource_name]
+                arn_formats = resource_data.get('ARNFormats', [])
+                # Handle ARNFormats as list or single value
+                if isinstance(arn_formats, list):
+                    arn_display = arn_formats if arn_formats else ['N/A']
+                else:
+                    arn_display = [arn_formats] if arn_formats else ['N/A']
+                
+                # Get condition keys specific to this resource with full metadata
+                resource_condition_key_names = resource_data.get('ConditionKeys', [])
+                resource_condition_keys = []
+                for key_name in resource_condition_key_names:
+                    if key_name in key_lookup:
+                        resource_condition_keys.append(key_lookup[key_name])
+                    else:
+                        resource_condition_keys.append({'Name': key_name, 'Types': ['Unknown']})
+                
+                return {
+                    'name': resource_name,
+                    'arn_formats': arn_display,
+                    'context_keys': resource_condition_keys
+                }
         
         return None
     
@@ -201,12 +355,12 @@ class AWSClient:
         if not metadata:
             return 0
         
-        service_metadata_resources = metadata.get("Resources", {})
+        service_metadata_resources = metadata.get("Resources", [])
         
-        # Handle both dict and list formats
-        if isinstance(service_metadata_resources, dict):
+        # Handle both dict and list formats - AWS now uses list format primarily
+        if isinstance(service_metadata_resources, list):
             return len(service_metadata_resources)
-        elif isinstance(service_metadata_resources, list):
+        elif isinstance(service_metadata_resources, dict):
             return len(service_metadata_resources)
         
         return 0
@@ -217,28 +371,11 @@ class AWSClient:
         if not metadata:
             return []
         
-        service_metadata_resources = metadata.get("Resources", {})
+        service_metadata_resources = metadata.get("Resources", [])
         detailed_resources = []
         
-        # Handle both dict and list formats
-        if isinstance(service_metadata_resources, dict):
-            for resource_name, resource_data in service_metadata_resources.items():
-                arn_formats = resource_data.get('ARNFormats', [])
-                # Handle ARNFormats as list or single value
-                if isinstance(arn_formats, list):
-                    arn_display = arn_formats if arn_formats else ['N/A']
-                else:
-                    arn_display = [arn_formats] if arn_formats else ['N/A']
-                
-                # Get condition keys specific to this resource
-                resource_condition_keys = resource_data.get('ConditionKeys', [])
-                
-                detailed_resources.append({
-                    'name': resource_name,
-                    'arn_formats': arn_display,
-                    'context_keys': resource_condition_keys
-                })
-        elif isinstance(service_metadata_resources, list):
+        # Handle both dict and list formats - AWS now uses list format primarily
+        if isinstance(service_metadata_resources, list):
             for resource_data in service_metadata_resources:
                 arn_formats = resource_data.get('ARNFormats', [])
                 # Handle ARNFormats as list or single value
@@ -252,6 +389,23 @@ class AWSClient:
                 
                 detailed_resources.append({
                     'name': resource_data.get('Name', 'Unknown'),
+                    'arn_formats': arn_display,
+                    'context_keys': resource_condition_keys
+                })
+        elif isinstance(service_metadata_resources, dict):
+            for resource_name, resource_data in service_metadata_resources.items():
+                arn_formats = resource_data.get('ARNFormats', [])
+                # Handle ARNFormats as list or single value
+                if isinstance(arn_formats, list):
+                    arn_display = arn_formats if arn_formats else ['N/A']
+                else:
+                    arn_display = [arn_formats] if arn_formats else ['N/A']
+                
+                # Get condition keys specific to this resource
+                resource_condition_keys = resource_data.get('ConditionKeys', [])
+                
+                detailed_resources.append({
+                    'name': resource_name,
                     'arn_formats': arn_display,
                     'context_keys': resource_condition_keys
                 })
@@ -277,13 +431,13 @@ class AWSClient:
             all_context_keys.update(action_keys)
         
         # Get resource-specific condition keys
-        service_resources = metadata.get("Resources", {})
-        if isinstance(service_resources, dict):
-            for resource_data in service_resources.values():
+        service_resources = metadata.get("Resources", [])
+        if isinstance(service_resources, list):
+            for resource_data in service_resources:
                 resource_keys = resource_data.get('ConditionKeys', [])
                 all_context_keys.update(resource_keys)
-        elif isinstance(service_resources, list):
-            for resource_data in service_resources:
+        elif isinstance(service_resources, dict):
+            for resource_data in service_resources.values():
                 resource_keys = resource_data.get('ConditionKeys', [])
                 all_context_keys.update(resource_keys)
         
@@ -423,3 +577,14 @@ class AWSClient:
             all_service_keys.update(keys)
         
         return sorted(list(all_service_keys))
+    
+    def get_condition_key_types_for_service(self, service_name: str) -> List[str]:
+        """Get all unique condition key types used by a service."""
+        condition_keys = self.get_condition_keys_with_metadata_for_service(service_name)
+        all_types = set()
+        
+        for key in condition_keys:
+            types = key.get('Types', [])
+            all_types.update(types)
+        
+        return sorted(list(all_types))

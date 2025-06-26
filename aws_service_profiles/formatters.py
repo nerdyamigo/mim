@@ -294,6 +294,17 @@ class OutputFormatter:
         else:  # text
             self._format_context_keys_text(service_name, context_keys)
     
+    def format_context_keys_with_metadata(self, service_name: str, context_keys_with_metadata: List[Dict[str, Any]], format_type: str = "json") -> None:
+        """Format and display context keys with full metadata for a service."""
+        if format_type == "json":
+            data = {"service": service_name, "context_keys": context_keys_with_metadata, "count": len(context_keys_with_metadata)}
+            self.console.print(json.dumps(data, indent=2))
+        elif format_type == "yaml":
+            data = {"service": service_name, "context_keys": context_keys_with_metadata, "count": len(context_keys_with_metadata)}
+            self.console.print(yaml.dump(data, default_flow_style=False))
+        else:  # Fallback to table/text with metadata info
+            self._format_context_keys_with_metadata_table(service_name, context_keys_with_metadata)
+    
     def format_all_context_keys(self, context_keys_by_service: Dict[str, List[str]], format_type: str = "table") -> None:
         """Format and display all context keys across AWS services."""
         if format_type == "json":
@@ -337,6 +348,23 @@ class OutputFormatter:
         self.console.print(f"[bold]Context Keys for {service_name}:[/bold]")
         for key in context_keys:
             self.console.print(f"  • [yellow]{key}[/yellow]")
+    
+    def _format_context_keys_with_metadata_table(self, service_name: str, context_keys_with_metadata: List[Dict[str, Any]]) -> None:
+        """Format context keys with metadata for a service as a table."""
+        table = Table(
+            title=f"Context Keys for {service_name} ({len(context_keys_with_metadata)} total)",
+            show_header=True,
+            header_style="bold magenta"
+        )
+        table.add_column("Context Key", style="yellow")
+        table.add_column("Types", style="blue")
+        
+        for key_data in context_keys_with_metadata:
+            key_name = key_data.get('Name', 'Unknown')
+            key_types = ', '.join(key_data.get('Types', ['Unknown']))
+            table.add_row(key_name, key_types)
+        
+        self.console.print(table)
     
     def _format_all_context_keys_table(self, context_keys_by_service: Dict[str, List[str]]) -> None:
         """Format all context keys across services as a table."""

@@ -1,0 +1,219 @@
+name: AWS Schema Monitor
+
+on:
+  schedule:
+    # Run daily at 9 AM UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      sample_size:
+        description: 'Number of services to sample'
+        required: false
+        default: '10'
+        type: string
+      create_baseline:
+        description: 'Create new baseline instead of monitoring'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  monitor-schema:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+    
+    - name: Create schemas directory
+      run: mkdir -p schemas
+    
+    - name: Create baseline (if requested)
+      if: ${{ github.event.inputs.create_baseline == 'true' }}
+      run: |
+        python scripts/schema_monitor.py --create-baseline --sample-size ${{ github.event.inputs.sample_size || '10' }}
+    
+    - name: Monitor schema changes
+      if: ${{ github.event.inputs.create_baseline != 'true' }}
+      id: monitor
+      run: |
+        set +e  # Don't fail immediately on non-zero exit
+        python scripts/schema_monitor.py --sample-size ${{ github.event.inputs.sample_size || '10' }} --output-format json > monitor_results.json
+        exit_code=$?
+        echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
+        
+        # Parse results
+        if [ -f monitor_results.json ]; then
+          echo "results_available=true" >> $GITHUB_OUTPUT
+          
+          # Check if changes were detected
+          has_changes=$(python -c "
+import json
+with open('monitor_results.json', 'r') as f:
+    data = json.load(f)
+print('true' if data.get('changes', {}).get('has_changes', False) else 'false')
+" 2>/dev/null || echo "false")
+          
+          echo "has_changes=$has_changes" >> $GITHUB_OUTPUT
+          
+          # Extract change details for notification
+          python -c "
+import json
+with open('monitor_results.json', 'r') as f:
+    data = json.load(f)
+
+changes = data.get('changes', {})
+if changes.get('has_changes', False):
+    print('## 🔍 AWS API Schema Changes Detected')
+    print()
+    
+    if changes.get('new_fields'):
+        print('### 🆕 New Fields:')
+        for field_type, fields in changes['new_fields'].items():
+            print(f'- **{field_type}**: {", ".join(fields)}')
+        print()
+    
+    if changes.get('removed_fields'):
+        print('### 🗑️ Removed Fields:')
+        for field_type, fields in changes['removed_fields'].items():
+            print(f'- **{field_type}**: {", ".join(fields)}')
+        print()
+    
+    if changes.get('new_data_types'):
+        print(f'### 📊 New Data Types: {", ".join(changes["new_data_types"])}')
+        print()
+    
+    if changes.get('removed_data_types'):
+        print(f'### 📉 Removed Data Types: {", ".join(changes["removed_data_types"])}')
+        print()
+    
+    print('---')
+    print('💡 **Action Required**: Review these changes and update the AWS Service Profiles CLI accordingly.')
+    print()
+    print(f'🕐 **Analysis Time**: {data.get("current_timestamp", "Unknown")}')
+    print(f'📊 **Services Analyzed**: {len(data.get("current_schema", {}).get("analyzed_services", []))}')
+else:
+    print('✅ No schema changes detected.')
+" > change_summary.md
+        else
+          echo "results_available=false" >> $GITHUB_OUTPUT
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Commit updated schemas
+      if: steps.monitor.outputs.has_changes == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add schemas/
+        git diff --staged --quiet || git commit -m "📊 Update AWS API schema baseline - $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+        git push
+    
+    - name: Create Issue for Schema Changes
+      if: steps.monitor.outputs.has_changes == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          let body = '🔍 **Automated AWS API Schema Change Detection**\n\n';
+          
+          try {
+            if (fs.existsSync('change_summary.md')) {
+              body += fs.readFileSync('change_summary.md', 'utf8');
+            } else {
+              body += 'Schema changes detected but summary could not be generated.';
+            }
+          } catch (error) {
+            body += `Error reading change summary: ${error.message}`;
+          }
+          
+          body += '\n\n---\n';
+          body += '**Next Steps:**\n';
+          body += '1. Review the detected changes\n';
+          body += '2. Update the AWS Service Profiles CLI code if needed\n';
+          body += '3. Update documentation and examples\n';
+          body += '4. Test the changes\n';
+          body += '5. Close this issue when addressed\n\n';
+          body += `**Workflow Run:** ${context.payload.repository.html_url}/actions/runs/${context.runId}`;
+          
+          const { data: issue } = await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `🚨 AWS API Schema Changes Detected - ${new Date().toISOString().split('T')[0]}`,
+            body: body,
+            labels: ['schema-change', 'automation', 'enhancement']
+          });
+          
+          console.log(`Created issue #${issue.number}: ${issue.html_url}`);
+    
+    - name: Send Slack Notification (Optional)
+      if: steps.monitor.outputs.has_changes == 'true' && vars.SLACK_WEBHOOK_URL
+      uses: 8398a7/action-slack@v3
+      with:
+        status: custom
+        custom_payload: |
+          {
+            "attachments": [
+              {
+                "color": "warning",
+                "title": "🔍 AWS API Schema Changes Detected",
+                "text": "New fields or data types detected in AWS Service Reference API",
+                "fields": [
+                  {
+                    "title": "Repository",
+                    "value": "${{ github.repository }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Workflow",
+                    "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>",
+                    "short": true
+                  }
+                ]
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+    
+    - name: Upload monitoring results
+      if: steps.monitor.outputs.results_available == 'true'
+      uses: actions/upload-artifact@v3
+      with:
+        name: schema-monitoring-results
+        path: |
+          monitor_results.json
+          change_summary.md
+          schemas/
+        retention-days: 30
+    
+    - name: Summary
+      run: |
+        echo "## Schema Monitoring Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.monitor.outputs.has_changes }}" == "true" ]; then
+          echo "🚨 **Schema changes detected!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f change_summary.md ]; then
+            cat change_summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "✅ **No schema changes detected.**" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📊 **Monitoring completed at:** $(date -u)" >> $GITHUB_STEP_SUMMARY

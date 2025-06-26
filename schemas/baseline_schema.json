@@ -1,0 +1,717 @@
+{
+  "analyzed_services": [
+    "backup-storage",
+    "ssm-sap",
+    "kendra",
+    "iot1click",
+    "groundstation",
+    "personalize",
+    "evs",
+    "lex",
+    "wellarchitected",
+    "oam"
+  ],
+  "top_level_fields": [
+    "Actions",
+    "ConditionKeys",
+    "Name",
+    "Resources",
+    "Version"
+  ],
+  "action_fields": [
+    "ActionConditionKeys",
+    "Annotations",
+    "Name",
+    "Resources"
+  ],
+  "resource_fields": [
+    "ARNFormats",
+    "ConditionKeys",
+    "Name"
+  ],
+  "condition_key_fields": [
+    "Name",
+    "Types"
+  ],
+  "data_types": [
+    "ArrayOfString",
+    "String"
+  ],
+  "field_combinations": [],
+  "service_variations": {
+    "backup-storage": {
+      "top_level_fields": [
+        "Actions",
+        "Name",
+        "Version"
+      ],
+      "action_fields": [
+        "Annotations",
+        "Name"
+      ],
+      "resource_fields": [],
+      "condition_key_fields": [],
+      "data_types": [],
+      "field_combinations": [
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name"
+          ]
+        }
+      ]
+    },
+    "ssm-sap": {
+      "top_level_fields": [
+        "Actions",
+        "ConditionKeys",
+        "Name",
+        "Resources",
+        "Version"
+      ],
+      "action_fields": [
+        "ActionConditionKeys",
+        "Annotations",
+        "Name",
+        "Resources"
+      ],
+      "resource_fields": [
+        "ARNFormats",
+        "ConditionKeys",
+        "Name"
+      ],
+      "condition_key_fields": [
+        "Name",
+        "Types"
+      ],
+      "data_types": [
+        "ArrayOfString",
+        "String"
+      ],
+      "field_combinations": [
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "condition_key",
+          "fields": [
+            "Name",
+            "Types"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "ConditionKeys",
+            "Name"
+          ]
+        }
+      ]
+    },
+    "kendra": {
+      "top_level_fields": [
+        "Actions",
+        "ConditionKeys",
+        "Name",
+        "Resources",
+        "Version"
+      ],
+      "action_fields": [
+        "ActionConditionKeys",
+        "Annotations",
+        "Name",
+        "Resources"
+      ],
+      "resource_fields": [
+        "ARNFormats",
+        "ConditionKeys",
+        "Name"
+      ],
+      "condition_key_fields": [
+        "Name",
+        "Types"
+      ],
+      "data_types": [
+        "ArrayOfString",
+        "String"
+      ],
+      "field_combinations": [
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "condition_key",
+          "fields": [
+            "Name",
+            "Types"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "ConditionKeys",
+            "Name"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "Name"
+          ]
+        }
+      ]
+    },
+    "iot1click": {
+      "top_level_fields": [
+        "Actions",
+        "ConditionKeys",
+        "Name",
+        "Resources",
+        "Version"
+      ],
+      "action_fields": [
+        "ActionConditionKeys",
+        "Annotations",
+        "Name",
+        "Resources"
+      ],
+      "resource_fields": [
+        "ARNFormats",
+        "ConditionKeys",
+        "Name"
+      ],
+      "condition_key_fields": [
+        "Name",
+        "Types"
+      ],
+      "data_types": [
+        "ArrayOfString",
+        "String"
+      ],
+      "field_combinations": [
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "condition_key",
+          "fields": [
+            "Name",
+            "Types"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "ConditionKeys",
+            "Name"
+          ]
+        }
+      ]
+    },
+    "groundstation": {
+      "top_level_fields": [
+        "Actions",
+        "ConditionKeys",
+        "Name",
+        "Resources",
+        "Version"
+      ],
+      "action_fields": [
+        "ActionConditionKeys",
+        "Annotations",
+        "Name",
+        "Resources"
+      ],
+      "resource_fields": [
+        "ARNFormats",
+        "ConditionKeys",
+        "Name"
+      ],
+      "condition_key_fields": [
+        "Name",
+        "Types"
+      ],
+      "data_types": [
+        "ArrayOfString",
+        "String"
+      ],
+      "field_combinations": [
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "condition_key",
+          "fields": [
+            "Name",
+            "Types"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "ConditionKeys",
+            "Name"
+          ]
+        }
+      ]
+    },
+    "personalize": {
+      "top_level_fields": [
+        "Actions",
+        "Name",
+        "Resources",
+        "Version"
+      ],
+      "action_fields": [
+        "Annotations",
+        "Name",
+        "Resources"
+      ],
+      "resource_fields": [
+        "ARNFormats",
+        "Name"
+      ],
+      "condition_key_fields": [],
+      "data_types": [],
+      "field_combinations": [
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "Name"
+          ]
+        }
+      ]
+    },
+    "evs": {
+      "top_level_fields": [
+        "Actions",
+        "ConditionKeys",
+        "Name",
+        "Resources",
+        "Version"
+      ],
+      "action_fields": [
+        "ActionConditionKeys",
+        "Annotations",
+        "Name",
+        "Resources"
+      ],
+      "resource_fields": [
+        "ARNFormats",
+        "ConditionKeys",
+        "Name"
+      ],
+      "condition_key_fields": [
+        "Name",
+        "Types"
+      ],
+      "data_types": [
+        "ArrayOfString",
+        "String"
+      ],
+      "field_combinations": [
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "condition_key",
+          "fields": [
+            "Name",
+            "Types"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "ConditionKeys",
+            "Name"
+          ]
+        }
+      ]
+    },
+    "lex": {
+      "top_level_fields": [
+        "Actions",
+        "ConditionKeys",
+        "Name",
+        "Resources",
+        "Version"
+      ],
+      "action_fields": [
+        "ActionConditionKeys",
+        "Annotations",
+        "Name",
+        "Resources"
+      ],
+      "resource_fields": [
+        "ARNFormats",
+        "ConditionKeys",
+        "Name"
+      ],
+      "condition_key_fields": [
+        "Name",
+        "Types"
+      ],
+      "data_types": [
+        "ArrayOfString",
+        "String"
+      ],
+      "field_combinations": [
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "condition_key",
+          "fields": [
+            "Name",
+            "Types"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "ConditionKeys",
+            "Name"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "Name"
+          ]
+        }
+      ]
+    },
+    "wellarchitected": {
+      "top_level_fields": [
+        "Actions",
+        "ConditionKeys",
+        "Name",
+        "Resources",
+        "Version"
+      ],
+      "action_fields": [
+        "ActionConditionKeys",
+        "Annotations",
+        "Name",
+        "Resources"
+      ],
+      "resource_fields": [
+        "ARNFormats",
+        "ConditionKeys",
+        "Name"
+      ],
+      "condition_key_fields": [
+        "Name",
+        "Types"
+      ],
+      "data_types": [
+        "ArrayOfString",
+        "String"
+      ],
+      "field_combinations": [
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "condition_key",
+          "fields": [
+            "Name",
+            "Types"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "ConditionKeys",
+            "Name"
+          ]
+        }
+      ]
+    },
+    "oam": {
+      "top_level_fields": [
+        "Actions",
+        "ConditionKeys",
+        "Name",
+        "Resources",
+        "Version"
+      ],
+      "action_fields": [
+        "ActionConditionKeys",
+        "Annotations",
+        "Name",
+        "Resources"
+      ],
+      "resource_fields": [
+        "ARNFormats",
+        "ConditionKeys",
+        "Name"
+      ],
+      "condition_key_fields": [
+        "Name",
+        "Types"
+      ],
+      "data_types": [
+        "ArrayOfString",
+        "String"
+      ],
+      "field_combinations": [
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name",
+            "Resources"
+          ]
+        },
+        {
+          "context": "condition_key",
+          "fields": [
+            "Name",
+            "Types"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "ConditionKeys",
+            "Name"
+          ]
+        }
+      ]
+    }
+  },
+  "timestamp": "2025-06-26T04:41:17.923209",
+  "schema_hash": "28a55512362d2b1443f61449b76fb50fa152dec5e8a43de5afcdd09468938877"
+}
