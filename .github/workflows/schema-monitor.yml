@@ -59,54 +59,12 @@ jobs:
           echo "results_available=true" >> $GITHUB_OUTPUT
           
           # Check if changes were detected
-          has_changes=$(python -c "
-import json
-with open('monitor_results.json', 'r') as f:
-    data = json.load(f)
-print('true' if data.get('changes', {}).get('has_changes', False) else 'false')
-" 2>/dev/null || echo "false")
+          has_changes=$(python -c "import json; data=json.load(open('monitor_results.json')); print('true' if data.get('changes',{}).get('has_changes',False) else 'false')" 2>/dev/null || echo "false")
           
           echo "has_changes=$has_changes" >> $GITHUB_OUTPUT
           
-          # Extract change details for notification
-          python -c "
-import json
-with open('monitor_results.json', 'r') as f:
-    data = json.load(f)
-
-changes = data.get('changes', {})
-if changes.get('has_changes', False):
-    print('## 🔍 AWS API Schema Changes Detected')
-    print()
-    
-    if changes.get('new_fields'):
-        print('### 🆕 New Fields:')
-        for field_type, fields in changes['new_fields'].items():
-            print(f'- **{field_type}**: {", ".join(fields)}')
-        print()
-    
-    if changes.get('removed_fields'):
-        print('### 🗑️ Removed Fields:')
-        for field_type, fields in changes['removed_fields'].items():
-            print(f'- **{field_type}**: {", ".join(fields)}')
-        print()
-    
-    if changes.get('new_data_types'):
-        print(f'### 📊 New Data Types: {", ".join(changes["new_data_types"])}')
-        print()
-    
-    if changes.get('removed_data_types'):
-        print(f'### 📉 Removed Data Types: {", ".join(changes["removed_data_types"])}')
-        print()
-    
-    print('---')
-    print('💡 **Action Required**: Review these changes and update the AWS Service Profiles CLI accordingly.')
-    print()
-    print(f'🕐 **Analysis Time**: {data.get("current_timestamp", "Unknown")}')
-    print(f'📊 **Services Analyzed**: {len(data.get("current_schema", {}).get("analyzed_services", []))}')
-else:
-    print('✅ No schema changes detected.')
-" > change_summary.md
+          # Generate detailed change summary
+          python scripts/generate_change_summary.py monitor_results.json > change_summary.md
         else
           echo "results_available=false" >> $GITHUB_OUTPUT
           echo "has_changes=false" >> $GITHUB_OUTPUT
