@@ -149,7 +149,7 @@ jobs:
     
     - name: Upload monitoring results
       if: steps.monitor.outputs.results_available == 'true'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: schema-monitoring-results
         path: |
