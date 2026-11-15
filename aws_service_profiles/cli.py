@@ -368,7 +368,7 @@ def cli(
 
     # 3. Handle live schema check (`mim --check-schema`)
     if check_schema:
-        from scripts.schema_monitor import SchemaMonitor, format_changes_report
+        from .schema_monitor import SchemaMonitor, format_changes_report
 
         monitor = SchemaMonitor()
         result = monitor.monitor_changes(sample_size=10, save_updates=False)

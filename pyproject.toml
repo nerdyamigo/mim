@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aws-service-profiles"
+version = "0.2.0"
+description = "A CLI tool for exploring AWS service actions, API operations, resources, and IAM condition keys"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+authors = [
+    { name = "Carlos Zavaleta" }
+]
+keywords = ["aws", "iam", "policies", "context-keys", "operations", "service-profiles", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "click>=8.0.0",
+    "requests>=2.28.0",
+    "rich>=12.0.0",
+    "tabulate>=0.8.9",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+mim = "aws_service_profiles.cli:cli"
+
+[project.urls]
+Homepage = "https://github.com/nerdyamigo/mim"
+Repository = "https://github.com/nerdyamigo/mim"
+Issues = "https://github.com/nerdyamigo/mim/issues"
+
+[tool.setuptools.packages.find]
+include = ["aws_service_profiles*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+aws_service_profiles = ["schemas/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

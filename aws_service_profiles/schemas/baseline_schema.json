@@ -1,0 +1,254 @@
+{
+  "analyzed_services": [
+    "s3"
+  ],
+  "service_index_fields": [
+    "modified",
+    "service",
+    "serviceName",
+    "url"
+  ],
+  "top_level_fields": [
+    "Actions",
+    "ConditionKeys",
+    "Name",
+    "Operations",
+    "Resources",
+    "ServiceName",
+    "Version"
+  ],
+  "action_fields": [
+    "ActionConditionKeys",
+    "Annotations",
+    "Name",
+    "Resources",
+    "SupportedBy"
+  ],
+  "annotation_property_fields": [
+    "IsDataPlane",
+    "IsList",
+    "IsPermissionManagement",
+    "IsTaggingOnly",
+    "IsWrite"
+  ],
+  "supported_by_fields": [
+    "IAM Access Analyzer Policy Generation",
+    "IAM Action Last Accessed"
+  ],
+  "operation_fields": [
+    "AuthorizedActions",
+    "Name",
+    "SDK"
+  ],
+  "resource_fields": [
+    "ARNFormats",
+    "ConditionKeys",
+    "Name"
+  ],
+  "condition_key_fields": [
+    "Name",
+    "Types"
+  ],
+  "data_types": [
+    "ARN",
+    "ArrayOfARN",
+    "ArrayOfString",
+    "Bool",
+    "Date",
+    "Numeric",
+    "String"
+  ],
+  "field_combinations": [
+    {
+      "context": "action",
+      "fields": [
+        "ActionConditionKeys",
+        "Annotations",
+        "Name",
+        "Resources",
+        "SupportedBy"
+      ]
+    },
+    {
+      "context": "action",
+      "fields": [
+        "ActionConditionKeys",
+        "Annotations",
+        "Name",
+        "SupportedBy"
+      ]
+    },
+    {
+      "context": "action",
+      "fields": [
+        "Annotations",
+        "Name",
+        "SupportedBy"
+      ]
+    },
+    {
+      "context": "condition_key",
+      "fields": [
+        "Name",
+        "Types"
+      ]
+    },
+    {
+      "context": "operation",
+      "fields": [
+        "AuthorizedActions",
+        "Name",
+        "SDK"
+      ]
+    },
+    {
+      "context": "operation",
+      "fields": [
+        "Name",
+        "SDK"
+      ]
+    },
+    {
+      "context": "resource",
+      "fields": [
+        "ARNFormats",
+        "ConditionKeys",
+        "Name"
+      ]
+    },
+    {
+      "context": "resource",
+      "fields": [
+        "ARNFormats",
+        "Name"
+      ]
+    }
+  ],
+  "service_variations": {
+    "s3": {
+      "service_index_fields": [
+        "modified",
+        "service",
+        "serviceName",
+        "url"
+      ],
+      "top_level_fields": [
+        "Actions",
+        "ConditionKeys",
+        "Name",
+        "Operations",
+        "Resources",
+        "ServiceName",
+        "Version"
+      ],
+      "action_fields": [
+        "ActionConditionKeys",
+        "Annotations",
+        "Name",
+        "Resources",
+        "SupportedBy"
+      ],
+      "annotation_property_fields": [
+        "IsDataPlane",
+        "IsList",
+        "IsPermissionManagement",
+        "IsTaggingOnly",
+        "IsWrite"
+      ],
+      "supported_by_fields": [
+        "IAM Access Analyzer Policy Generation",
+        "IAM Action Last Accessed"
+      ],
+      "operation_fields": [
+        "AuthorizedActions",
+        "Name",
+        "SDK"
+      ],
+      "resource_fields": [
+        "ARNFormats",
+        "ConditionKeys",
+        "Name"
+      ],
+      "condition_key_fields": [
+        "Name",
+        "Types"
+      ],
+      "data_types": [
+        "ARN",
+        "ArrayOfString",
+        "Bool",
+        "Date",
+        "Numeric",
+        "String"
+      ],
+      "field_combinations": [
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name",
+            "Resources",
+            "SupportedBy"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "ActionConditionKeys",
+            "Annotations",
+            "Name",
+            "SupportedBy"
+          ]
+        },
+        {
+          "context": "action",
+          "fields": [
+            "Annotations",
+            "Name",
+            "SupportedBy"
+          ]
+        },
+        {
+          "context": "condition_key",
+          "fields": [
+            "Name",
+            "Types"
+          ]
+        },
+        {
+          "context": "operation",
+          "fields": [
+            "AuthorizedActions",
+            "Name",
+            "SDK"
+          ]
+        },
+        {
+          "context": "operation",
+          "fields": [
+            "Name",
+            "SDK"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "ConditionKeys",
+            "Name"
+          ]
+        },
+        {
+          "context": "resource",
+          "fields": [
+            "ARNFormats",
+            "Name"
+          ]
+        }
+      ]
+    }
+  },
+  "timestamp": "2026-11-09T06:36:55.573609+00:00",
+  "schema_hash": "be0aff8e7a535deda5da441fe1798fcd76fe226359951f3c5774b1cc3c0bc84d"
+}

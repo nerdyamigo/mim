@@ -186,3 +186,20 @@ def test_cli_update_and_clear_cache(cli_runner, mock_aws_client, monkeypatch):
     res_clear = cli_runner.invoke(cli_module.cli, ["--clear-cache"])
     assert res_clear.exit_code == 0
     assert "Cleared" in res_clear.output
+
+
+def test_cli_check_schema(cli_runner, monkeypatch):
+    """Test 'mim --check-schema' uses bundled aws_service_profiles.schema_monitor."""
+    from aws_service_profiles import schema_monitor as sm_mod
+
+    monkeypatch.setattr(
+        sm_mod.SchemaMonitor,
+        "monitor_changes",
+        lambda self, sample_size=10, save_updates=False: {
+            "status": "analysis_complete",
+            "changes": {"has_changes": False},
+        },
+    )
+    res = cli_runner.invoke(cli_module.cli, ["--check-schema"])
+    assert res.exit_code == 0
+    assert "No schema changes detected" in res.output
